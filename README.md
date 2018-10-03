@@ -1,6 +1,6 @@
 # 95040 Eepromtool
 
-95040 Eepromtool (previously called 95040tool) is a tool for easily displaying information in bosch m7.5 ecu eeproms and coresponding custer eeproms. This tool was written for VAG 1.8t engines using immo 3, it may also work with other engines and versions, but has limited testing. Eepromtool does not offer facility to read/write to an ecu, it is soley for viewing and modifying files that you have already.
+95040 Eepromtool is a tool for easily displaying information in bosch m7.5 ecu eeproms and coresponding custer eeproms. This tool was written for VAG 1.8t engines using immo 3, it may also work with other engines and versions, but has limited testing. Eepromtool does not offer facility to read/write to an ecu, it is soley for viewing and modifying files that you have already.
 
 The most recent release can be found in https://github.com/turboat/eepromtool/releases/
 
