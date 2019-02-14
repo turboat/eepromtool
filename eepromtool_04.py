@@ -4,7 +4,7 @@ import argparse, sys #for handling command line params
 # Minor edit, 28-9-2018
 # Converted to Python3, 13-02-2019
 
-VERSION = 0.4.1
+VERSION = 0.4
 WARN = False
 DEBUG = False
 
