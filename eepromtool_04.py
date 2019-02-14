@@ -2,8 +2,9 @@ import argparse, sys #for handling command line params
 
 # Last major update: 9-9-2014
 # Minor edit, 28-9-2018
+# Converted to Python3, 13-02-2019
 
-VERSION = 0.4
+VERSION = 0.4.1
 WARN = False
 DEBUG = False
 
@@ -65,7 +66,7 @@ class ecueeprom:
 
 
     def __init__(self,ndata):
-        if DEBUG: print "Parsing as ECU eeprom"
+        if DEBUG: print("Parsing as ECU eeprom")
         self.data = ndata
         self.parse()
 
@@ -81,7 +82,7 @@ class ecueeprom:
 
         if self.immover == 3:
             if self.data[0x00][0x00] == 0x30:
-                print "Bin starts 30 30 30 30 30 - is this a 1024kb R32 bin?"
+                print("Bin starts 30 30 30 30 30 - is this a 1024kb R32 bin?")
                 #R32 = True
 
         #set length
@@ -91,13 +92,13 @@ class ecueeprom:
 
         #Parse R32 1kb bins
         if self.size == 1024 or R32 == True:
-            print "Found 1024b bin - parsing as a R32 bin - experimental"
+            print("Found 1024b bin - parsing as a R32 bin - experimental")
             for page in range(0x20,0x40):
                 for bite in self.data[page]:
                     if bite != 0xFF:
                         R32=False
             if R32:
-                print "The last 512bytes are padded with 0xFF, this appears to be an R32 bin"
+                print("The last 512bytes are padded with 0xFF, this appears to be an R32 bin")
                 self.R32 = True
                 #add the padding bytes to nochecksumpages
                 self.noCheckSumPages.append(0x1C)
@@ -105,7 +106,7 @@ class ecueeprom:
                 for page in range(0x20,0x40):
                     self.noCheckSumPages.append(page)
             else:
-                print "ERROR: 1024byte file detected, but the last 512bytes are not all padded with 0xFF, this file is may be a corupt dump, a cluster dump or something other than an eeprom dump, open it with a hex editor - if this is a valid eeprom please post the file and vehicle info on the thread for this tool"
+                print("ERROR: 1024byte file detected, but the last 512bytes are not all padded with 0xFF, this file is may be a corupt dump, a cluster dump or something other than an eeprom dump, open it with a hex editor - if this is a valid eeprom please post the file and vehicle info on the thread for this tool")
 
 
         #get SKC
@@ -144,7 +145,7 @@ class ecueeprom:
         try:
             self.vin = vinstring.decode('ascii')
         except:
-            print "WARNING: cannot decode VIN, try setting VIN to fix"
+            print("WARNING: cannot decode VIN, try setting VIN to fix")
 
         self.vindetail = parsevin(self.vin)
         #get softcoding
@@ -159,7 +160,7 @@ class ecueeprom:
         try:
             self.immoid = immostring.decode('ascii')
         except:
-            print "WARNING: cannot decode ImmmoID"
+            print("WARNING: cannot decode ImmmoID")
 
         #get flasher tag
         try:
@@ -177,14 +178,14 @@ class ecueeprom:
 
     def validateChecksum(self):
         try:
-            if DEBUG: print "Validating Checksum"
+            if DEBUG: print("Validating Checksum")
             minus = 1
             self.csum = True
             #FFFF - (page number - 1) - sum(first 14 bytes)
             for pageno in range(0x00,len(self.data)):
                 #skip pages without a checksum
                 if pageno in self.noCheckSumPages:
-                    if DEBUG: print "Skipping nochecksumpage: %0.2X" % pageno
+                    if DEBUG: print("Skipping nochecksumpage: %0.2X" % pageno)
                     continue
                 #if this is a backup page, use the previous page's no to calculate the checksum
                 if pageno in self.backupPage:
@@ -199,18 +200,18 @@ class ecueeprom:
                 savedsum = "%0.2X%0.2X" % (self.data[pageno][0x0F],self.data[pageno][0x0E])
                 if calcsum != int(savedsum,16):
                     self.csum = False
-                    if DEBUG: print "Checksum Error page: %0.2X" % pageno
+                    if DEBUG: print("Checksum Error page: %0.2X" % pageno)
                 else:
-                    if DEBUG: print "Checksum OK page: %0.2X" % pageno
+                    if DEBUG: print("Checksum OK page: %0.2X" % pageno)
         except:
-            print "WARNING: Cannot validate checksum, possible invalid input"
+            print("WARNING: Cannot validate checksum, possible invalid input")
             self.csum = False
 
         if DEBUG:
             if self.csum == True:
-                print "Checksum OK"
+                print("Checksum OK")
             else:
-                print "Checksum error or validation failure"
+                print("Checksum error or validation failure")
 
     def fixChecksum(self):
         """
@@ -219,16 +220,16 @@ class ecueeprom:
 
         #if the nfc flag is set (from the command line), return without doing checksum/backups
         if self.noFixCheckSum:
-            print "- Skipping page backup and checksum correction"
+            print("- Skipping page backup and checksum correction")
             return
 
-        print "- Setting backup pages"
+        print("- Setting backup pages")
         #do backups
         for pageno in range(0x00,len(self.data)):
             if pageno in self.backupPage:
                 self.data[pageno] = self.data[pageno - 1]
 
-        print "- Correcting checksums"
+        print("- Correcting checksums")
         #do checksums
         minus = 1
         self.csum = True
@@ -260,53 +261,53 @@ class ecueeprom:
         try:
             self.fixChecksum()
         except:
-            print "Warning: Error correcting checksum, checksums in output file may be invalid"
+            print("Warning: Error correcting checksum, checksums in output file may be invalid")
         outputdata = bytearray()
         for row in self.data:
             for bite in row:
                 outputdata.append(bite)
 
-        print ""
-        if DEBUG: print "Writing %dkb ECU eeprom bin to: %s" % (len(outputdata),outputfile)
+        print("")
+        if DEBUG: print("Writing %dkb ECU eeprom bin to: %s" % (len(outputdata),outputfile))
         try:
             with open(outputfile,'wb') as fp:
                 fp.write(outputdata)
         except:
-            print "Error: Could not open output file, exiting"
+            print("Error: Could not open output file, exiting")
             exit(1)
-        print "- Write Successful"
+        print("- Write Successful")
 
     def printStatus(self):
-        print "EEPROM Status:"
-        print "- Type: %s" % self.bin_type
-        print "- Version: Immo%d" % self.immover
+        print("EEPROM Status:")
+        print("- Type: %s" % self.bin_type)
+        print("- Version: Immo%d" % self.immover)
         if self.getVINDetail() is not "":
-            print "- VIN: %s (%s)" % (self.getVIN(),self.getVINDetail())
+            print("- VIN: %s (%s)" % (self.getVIN(),self.getVINDetail()))
         else:
-            print "- VIN: %s" % (self.getVIN())
-        print "- SKC: " + self.getSKC()
-        print "- Immobiliser: " + self.getImmo()
-        print "- Checksum: " + self.getChecksum()
-        print "- Size: " + self.getLength()
-        print "- Cluster Code: " + self.getClusterCode()
-        print "- P0601 DTC: " + self.getDTC()
-        print "- Immo ID: " + self.getImmoID()
-        print "- Softcoding ID: " + self.getSoftcoding()
-        print "- Tuner Tag: " + self.getTunerTag()
-        print "- Flash Programming (successful): %d" % self.flashsuccessfulcount
-        print "- Flash Programming (attempts): %d" % self.flashattemptcount
-        print ""
+            print("- VIN: %s" % (self.getVIN()))
+        print("- SKC: " + self.getSKC())
+        print("- Immobiliser: " + self.getImmo())
+        print("- Checksum: " + self.getChecksum())
+        print("- Size: " + self.getLength())
+        print("- Cluster Code: " + self.getClusterCode())
+        print("- P0601 DTC: " + self.getDTC())
+        print("- Immo ID: " + self.getImmoID())
+        print("- Softcoding ID: " + self.getSoftcoding())
+        print("- Tuner Tag: " + self.getTunerTag())
+        print("- Flash Programming (successful): %d" % self.flashsuccessfulcount)
+        print("- Flash Programming (attempts): %d" % self.flashattemptcount)
+        print("")
 
     def getLength(self):
         if self.size == 512:
             return "%dbytes" % self.size
         elif self.size/1024 == 512:
-            print "Size: 512kb - is this a flash bin not an eeprom bin?"
-            print "Exiting"
+            print("Size: 512kb - is this a flash bin not an eeprom bin?")
+            print("Exiting")
             exit(1)
         elif self.size/1024 == 1024:
-            print "Size: 1024kb - is this a flash bin not an eeprom bin?"
-            print "Exiting"
+            print("Size: 1024kb - is this a flash bin not an eeprom bin?")
+            print("Exiting")
             exit(1)
         else:
             return "%dbytes - 512bytes expected, check this is a eeprom bin" % self.size
@@ -354,24 +355,24 @@ class ecueeprom:
         Set the immo on or off
         """
         if setting is True:
-            print "Setting Immobiliser: On"
+            print("Setting Immobiliser: On")
             if self.immo is True:
-                print "- Immobiliser already set On"
+                print("- Immobiliser already set On")
                 return
             #Set immobiliser on
             self.data[0x1][0x2] = 0x01
             self.data[0x2][0x2] = 0x01
-            print "- Immobiliser On"
+            print("- Immobiliser On")
 
         else:
-            print "Setting Immobiliser: Off"
+            print("Setting Immobiliser: Off")
             if self.immo is False:
-                print "- Immobiliser already set Off"
+                print("- Immobiliser already set Off")
                 return
             #Set immo off
             self.data[0x1][0x2] = 0x02
             self.data[0x2][0x2] = 0x02
-            print "- Immobiliser Off"
+            print("- Immobiliser Off")
 
         self.parse()
         self.write = True
@@ -385,9 +386,9 @@ class ecueeprom:
 
     def setVIN(self,newvin):
         if len(newvin) is not 17:
-            print "ERROR: VIN number must be 17 characters"
+            print("ERROR: VIN number must be 17 characters")
             exit(1)
-        print "Setting VIN to %s" % newvin
+        print("Setting VIN to %s" % newvin)
         bavin = bytearray(newvin,'ascii')
 
         self.data[0xB][0x05:0xA] = bavin[0x00:0x05]
@@ -396,7 +397,7 @@ class ecueeprom:
         try:
             a = 1
         except:
-            print "ERROR: Could not set VIN"
+            print("ERROR: Could not set VIN")
             exit(1)
         self.parse()
         self.write = True
@@ -421,7 +422,7 @@ class clustereeprom:
 
 
     def __init__(self,ndata):
-        if DEBUG: print "Parsing as cluster eeprom"
+        if DEBUG: print("Parsing as cluster eeprom")
         self.data = ndata
         self.parse()
 
@@ -431,8 +432,8 @@ class clustereeprom:
         self.size = 0
         for page in self.data:
             self.size += len(page)
-            if len(page) > 16: print "ERROR, long row: %d " % len(page)
-            elif len(page) < 16: print "ERROR, short row: %d " % len(page)
+            if len(page) > 16: print("ERROR, long row: %d " % len(page))
+            elif len(page) < 16: print("ERROR, short row: %d " % len(page))
 
         #get SKC
         hexskc = "%0.2x%0.2x" % (self.data[0xC][0xD],self.data[0xC][0xC])
@@ -445,11 +446,11 @@ class clustereeprom:
         cc3 = self.data[0x8][0x2:0x9]
 
         if cc1 != cc2:
-            print "WARNING: Cluster Code Block 1 and 2 do not match, this may indicate an error in the file, or a format not supported by this tool"
+            print("WARNING: Cluster Code Block 1 and 2 do not match, this may indicate an error in the file, or a format not supported by this tool")
         if cc1 != cc3:
-            print "WARNING: Cluster Code Block 1 and 3 do not match, this may indicate an error in the file, or a format not supported by this tool"
+            print("WARNING: Cluster Code Block 1 and 3 do not match, this may indicate an error in the file, or a format not supported by this tool")
         if cc2 != cc3:
-            print "WARNING: Cluster Code Block 2 and 3 do not match, this may indicate an error in the file, or a format not supported by this tool"
+            print("WARNING: Cluster Code Block 2 and 3 do not match, this may indicate an error in the file, or a format not supported by this tool")
 
 
         self.clustercode = ""
@@ -465,7 +466,7 @@ class clustereeprom:
         try:
             self.vin = vinstring.decode('ascii')
         except:
-            print "WARNING: cannot decode VIN, try setting VIN to fix"
+            print("WARNING: cannot decode VIN, try setting VIN to fix")
 
         self.vindetail = parsevin(self.vin)
 
@@ -477,7 +478,7 @@ class clustereeprom:
         try:
             self.immoid = immostring.decode('ascii')
         except:
-            print "WARNING: cannot decode ImmmoID"
+            print("WARNING: cannot decode ImmmoID")
 
     def writebin(self,outputfile):
         outputdata = bytearray()
@@ -486,38 +487,38 @@ class clustereeprom:
             for bite in row:
                 count += 1
                 outputdata.append(bite)
-        print "Writing %dkb cluster eeprom bin to: %s" % (len(outputdata),outputfile)
+        print("Writing %dkb cluster eeprom bin to: %s" % (len(outputdata),outputfile))
         try:
             with open(outputfile,'wb') as fp:
                 fp.write(outputdata)
         except:
-            print "Error: Could not open output file, exiting"
+            print("Error: Could not open output file, exiting")
             exit(1)
-        print "- Write Successful"
-        print "\nThis tool cannot set checksum for cluster bins, so you must force the cluster to reset the checksum by using VCDS to update the cluster softcoding (setting it to the same value will force the update)"
+        print("- Write Successful")
+        print("\nThis tool cannot set checksum for cluster bins, so you must force the cluster to reset the checksum by using VCDS to update the cluster softcoding (setting it to the same value will force the update)")
 
     def printStatus(self):
-        print "EEPROM Status:"
-        print "- Type: %s" % self.bin_type
+        print("EEPROM Status:")
+        print("- Type: %s" % self.bin_type)
         if self.getVINDetail() is not "":
-            print "- VIN: %s (%s)" % (self.getVIN(),self.getVINDetail())
+            print("- VIN: %s (%s)" % (self.getVIN(),self.getVINDetail()))
         else:
-            print "- VIN: %s" % (self.getVIN())
-        print "- SKC: " + self.getSKC()
-        print "- Cluster Code: " + self.getClusterCode()
-        print "- Immo ID: " + self.getImmoID()
-        print ""
+            print("- VIN: %s" % (self.getVIN()))
+        print("- SKC: " + self.getSKC())
+        print("- Cluster Code: " + self.getClusterCode())
+        print("- Immo ID: " + self.getImmoID())
+        print("")
 
     def getLength(self):
         if self.size == 2048:
             return "%dbytes" % self.size
         elif self.size/1024 == 512:
-            print "Size: 512kb - is this a flash bin not an eeprom bin?"
-            print "Exiting"
+            print("Size: 512kb - is this a flash bin not an eeprom bin?")
+            print("Exiting")
             exit(1)
         elif self.size/1024 == 1024:
-            print "Size: 1024kb - is this a flash bin not an eeprom bin?"
-            print "Exiting"
+            print("Size: 1024kb - is this a flash bin not an eeprom bin?")
+            print("Exiting")
             exit(1)
         else:
             return "%dbytes - 2048bytes expected, check this is an ecu eeprom bin" % self.size
@@ -528,15 +529,15 @@ class clustereeprom:
     def setSKC(self,skc):
         #sanity check
         if len(skc) > 5 or len(skc) < 4:
-            print "ERROR: SKC must be in format 0xxxx or xxxx, where x is in range 0-9"
+            print("ERROR: SKC must be in format 0xxxx or xxxx, where x is in range 0-9")
             exit(1)
         try:
             tmp = int(skc)
         except:
-            print "ERROR: SKC must be in format 0xxxx or xxxx, where x is in range 0-9"
+            print("ERROR: SKC must be in format 0xxxx or xxxx, where x is in range 0-9")
             exit(1)
         if len(skc) == 5 and skc[0] != "0":
-            print "ERROR: SKC must be in format 0xxxx or xxxx, where x is in range 0-9"
+            print("ERROR: SKC must be in format 0xxxx or xxxx, where x is in range 0-9")
             exit(1)
 
         if len(skc) == 5:
@@ -544,7 +545,7 @@ class clustereeprom:
         else:
             tskc = "%0.4x" % int(skc)
 
-        print "Setting SKC to %s" % skc
+        print("Setting SKC to %s" % skc)
         self.data[0xC][0xC] = int(tskc[2:],16)
         self.data[0xC][0xD] = int(tskc[:2],16)
         self.data[0xC][0xE] = int(tskc[2:],16)
@@ -580,35 +581,35 @@ class clustereeprom:
         return self.vindetail
 
     def setVIN(self,newvin):
-        if DEBUG: print "Trying to set vin to %s (%s)" % (newvin,parsevin(newvin))
+        if DEBUG: print("Trying to set vin to %s (%s)" % (newvin,parsevin(newvin)))
         try:
             if len(newvin) is not 17:
-                print "ERROR: VIN number must be 17 characters"
+                print("ERROR: VIN number must be 17 characters")
                 exit(1)
-            print "Setting VIN to %s" % newvin
+            print("Setting VIN to %s" % newvin)
             bavin = bytearray(newvin,'ascii')
 
             self.data[0xD][0x02:0x10] = bavin[0x00:0x0E]
             del bavin[0x0:0xE]
             self.data[0xE][0x00:0x03] = bavin
         except:
-            print "ERROR: Could not set VIN"
+            print("ERROR: Could not set VIN")
             exit(1)
         self.parse()
         self.write = True
 
-        if DEBUG: print "Set vin to %s" % self.getVIN()
+        if DEBUG: print("Set vin to %s" % self.getVIN())
 
     def getImmoID(self):
         return self.immoid
 
     def setImmoID(self,immoid):
-        if DEBUG: print "Trying to set immo ID to %s" % immoid
+        if DEBUG: print("Trying to set immo ID to %s" % immoid)
         try:
             if len(immoid) is not 14:
-                print "ERROR: VIN number must be 14 characters"
+                print("ERROR: VIN number must be 14 characters")
                 exit(1)
-            print "Setting Immo ID to %s" % immoid
+            print("Setting Immo ID to %s" % immoid)
             baii = bytearray(immoid,'ascii')
 
             self.data[0xA][0x02:0x10] = baii[0x00:0x0E]
@@ -616,12 +617,12 @@ class clustereeprom:
             self.data[0xB][0xE:0x10] = baii[0x00:0x02]
             self.data[0xC][:0xC] = baii[0x02:0x0E]
         except:
-            print "ERROR: Could not set Immo ID"
+            print("ERROR: Could not set Immo ID")
             exit(1)
         self.parse()
         self.write = True
 
-        if DEBUG: print "Set immo ID to %s" % self.getImmoID()
+        if DEBUG: print("Set immo ID to %s" % self.getImmoID())
 
     def pair(self,ecueepromfile):
         ecueeprombin = ecueeprom(readbin(ecueepromfile))
@@ -632,8 +633,8 @@ class clustereeprom:
         self.setClusterCode(ecueeprombin.getClusterCode())
         self.setSKC(ecueeprombin.getSKC())
 
-        print ""
-        print "Cluster updated to:"
+        print("")
+        print("Cluster updated to:")
         self.printStatus()
         self.write = True
 
@@ -654,8 +655,8 @@ def readbin(filename):
             if onlyread512k:
                 if len(data) == 32:
                     readmore = False
-    if DEBUG: print "Read in %d 16 byte rows - %dbytes total" % (len(data),len(data)*16)
-    print "Read in %dbytes" % (len(data)*16)
+    if DEBUG: print("Read in %d 16 byte rows - %dbytes total" % (len(data),len(data)*16))
+    print("Read in %dbytes" % (len(data)*16))
     return data
 
 
@@ -673,7 +674,7 @@ def parsevin(vinin):
 
 
 def main():
-    if WARN: print "95040 Eeprom Tool - " + str(VERSION) + "- No warranty implied or given, manually verify all changes before saving eeprom to ECU, this tool could cause permenent damage to ECU and prevent vehicle running\n"
+    if WARN: print("95040 Eeprom Tool - " + str(VERSION) + "- No warranty implied or given, manually verify all changes before saving eeprom to ECU, this tool could cause permenent damage to ECU and prevent vehicle running\n")
     parser = argparse.ArgumentParser(description='95040 Eeprom Tool ' + str(VERSION) + ' View/Modify me7.5 eeprom files')
     parser.add_argument('--in',dest='infile',help='Input eeprom bin',required=True)
     parser.add_argument('--out',dest='outfile',help='File to save eeprom to (must be supplied if changing Immo/VIN)')
@@ -690,7 +691,7 @@ def main():
     parser.add_argument('--force',dest='force',action='store_const',const=True, help='Prevent the tool from guessing eeprom type')
 
     if DEBUG:
-        print "Debug mode active"
+        print("Debug mode active")
     #create namespace for args
     args = argparse.Namespace()
 
@@ -713,17 +714,17 @@ def main():
         try:
             data = readbin(args.infile)
         except:
-            print "ERROR: Could not open input file - %s" % args.infile
+            print("ERROR: Could not open input file - %s" % args.infile)
             sys.exit(1)
     else:
-        print "Error: No Input file"
+        print("Error: No Input file")
         sys.exit(1)
 
     #Attempt to autodetect if this is a cluster or ecu bin, based on size
     if not args.force:
         if not args.cluster:
             if (len(data) *16) == 2048:
-                print "Detected 2kb bin, parsing as a cluster eeprom (prevent this guessing by using --force)"
+                print("Detected 2kb bin, parsing as a cluster eeprom (prevent this guessing by using --force)")
                 args.cluster = True
 
     #Load and parse eeprom
@@ -742,7 +743,7 @@ def main():
 
     if args.fixcs or args.immo or args.vin:
         if not args.outfile:
-            print "ERROR: Output file must be supplied when correcting checksum, setting immo or changing VIN"
+            print("ERROR: Output file must be supplied when correcting checksum, setting immo or changing VIN")
             sys.exit(1)
 
     if args.nofixcs:
@@ -753,7 +754,7 @@ def main():
 
     if args.immo:
         if args.cluster:
-            print "ERROR: No immo to set in cluster eeprom"
+            print("ERROR: No immo to set in cluster eeprom")
             exit(1)
         if args.immo.lower() == 'off':
             eeprombin.setImmo(False)
@@ -765,17 +766,17 @@ def main():
 
     if args.skc:
         if not args.cluster:
-            print "Not Yet Supported for ECU Bins"
+            print("Not Yet Supported for ECU Bins")
         eeprombin.setSKC(args.skc)
 
     if args.cc:
         if not args.cluster:
-            print "Not Yet Supported for ECU Bins"
+            print("Not Yet Supported for ECU Bins")
         eeprombin.setClusterCode(args.cc)
 
     if args.ii:
         if not args.cluster:
-            print "Not Yet Supported for ECU Bins"
+            print("Not Yet Supported for ECU Bins")
         eeprombin.setImmoID(args.ii)
 
     if args.pair:
